@@ -14,42 +14,39 @@
     <h1>My Workspace</h1>
 
     <!-- IMPORTANT NOTES -->
-    <section class="block">
-      <h2>Important Notes</h2>
-      <textarea placeholder="Write important things here..."></textarea>
-    </section>
+   <section class="block">
+  <h2>Tracker</h2>
 
-    <!-- TRACKER -->
-    <section class="block">
-      <h2>Tracker</h2>
+  <!-- Tracker Input Form -->
+  <div class="tracker-form">
+    <input type="text" id="title" placeholder="Title" />
+    <input type="date" id="date" />
+    <input type="time" id="time" />
+    <select id="status">
+      <option value="Scheduled">Scheduled</option>
+      <option value="Completed">Completed</option>
+      <option value="Cancelled">Cancelled</option>
+    </select>
+    <input type="text" id="notes" placeholder="Notes" />
+    <button onclick="addRow()">Add Row</button>
+  </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Status</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Interview - ABC</td>
-            <td>12-Feb-2026</td>
-            <td>11:00 AM</td>
-            <td>Scheduled</td>
-            <td>Prepare Kubernetes</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- MY NOTES -->
-    <section class="block">
-      <h2>My Notes</h2>
-      <textarea placeholder="Write important notes here..."></textarea>
-    </section>
+  <!-- Tracker Table -->
+  <table id="trackerTable">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Status</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Rows will be added dynamically -->
+    </tbody>
+  </table>
+</section>
 
   </div>
 
