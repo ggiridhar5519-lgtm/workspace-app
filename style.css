@@ -67,3 +67,14 @@ th {
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
+/* =========================
+   APP CONTAINER (MAIN FIX)
+========================= */
+.app-container {
+  max-width: 1100px;
+  margin: 60px auto;
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
