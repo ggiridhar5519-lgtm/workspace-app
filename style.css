@@ -78,3 +78,23 @@ th {
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
 }
+.tracker-form {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tracker-form input,
+.tracker-form select {
+  padding: 8px;
+}
+
+.tracker-form button {
+  padding: 8px 14px;
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
