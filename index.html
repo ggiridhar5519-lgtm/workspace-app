@@ -4,31 +4,54 @@
   <meta charset="UTF-8" />
   <title>Personal Workspace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="stylesheet" href="style.css">
-
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+
   <div class="app-container">
 
-    <!-- existing content stays SAME -->
     <h1>My Workspace</h1>
 
-    <h2>Important Notes</h2>
-    <textarea placeholder="Write important things here..."></textarea>
+    <!-- IMPORTANT NOTES -->
+    <section class="block">
+      <h2>Important Notes</h2>
+      <textarea placeholder="Write important things here..."></textarea>
+    </section>
 
-    <h2>Tracker</h2>
+    <!-- TRACKER -->
+    <section class="block">
+      <h2>Tracker</h2>
 
-    <h2>My Notes</h2>
-    <textarea placeholder="Write important notes here..."></textarea>
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Interview - ABC</td>
+            <td>12-Feb-2026</td>
+            <td>11:00 AM</td>
+            <td>Scheduled</td>
+            <td>Prepare Kubernetes</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
 
-    <!-- table stays same -->
+    <!-- MY NOTES -->
+    <section class="block">
+      <h2>My Notes</h2>
+      <textarea placeholder="Write important notes here..."></textarea>
+    </section>
 
   </div>
-</body>
-
-    </table>
-  </section>
 
 </body>
 </html>
-
