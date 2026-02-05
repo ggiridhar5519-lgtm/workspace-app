@@ -67,6 +67,13 @@ th {
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
+.block {
+  background: #ffffff;
+  padding: 28px;
+  margin-bottom: 32px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
 /* =========================
    APP CONTAINER (MAIN FIX)
 ========================= */
