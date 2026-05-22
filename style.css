@@ -97,7 +97,7 @@ th {
   padding: 8px;
 }
 
-..tracker-form button {
+ .tracker-form button {
   background: linear-gradient(135deg, #0ea5e9, #2563eb);
   color: white;
   border: none;
