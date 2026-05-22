@@ -52,4 +52,3 @@ function clearForm() {
   document.getElementById("notes").value = "";
 }
 
-<td class="${data.status.toLowerCase()}">${data.status}</td>
