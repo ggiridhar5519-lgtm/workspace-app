@@ -1,60 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Personal Workspace</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111315">
+  <title>Personal Command Center</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">P</div>
+        <div>
+          <strong>PERSONAL</strong>
+          <span>COMMAND CENTER</span>
+        </div>
+      </div>
 
-  <div class="app-container">
+      <nav class="nav">
+        <button class="nav-item active" data-view="all"><span>◈</span> All Tasks</button>
+        <button class="nav-item" data-view="today"><span>◷</span> Today</button>
+        <button class="nav-item" data-view="upcoming"><span>→</span> Upcoming</button>
+        <button class="nav-item" data-view="completed"><span>✓</span> Completed</button>
+        <button class="nav-item" data-view="cancelled"><span>×</span> Cancelled</button>
+      </nav>
 
-    <h1>My Workspace</h1>
+      <div class="sidebar-bottom">
+        <div class="storage-note">
+          <span class="status-dot"></span>
+          <div>
+            <strong>Local storage</strong>
+            <small>Your data stays in this browser</small>
+          </div>
+        </div>
+        <button id="clearAllBtn" class="danger-ghost">Clear all data</button>
+      </div>
+    </aside>
 
-    <!-- IMPORTANT NOTES -->
-   <section class="block">
-  <h2>Tracker</h2>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">PERSONAL WORKSPACE</p>
+          <h1>Command Center</h1>
+          <p class="subheading" id="currentDate"></p>
+        </div>
+        <button class="primary-btn" id="openAddBtn">＋ New Task</button>
+      </header>
 
-  <!-- Tracker Input Form -->
-  <div class="tracker-form">
-    <input type="text" id="title" placeholder="Title" />
-    <input type="date" id="date" />
-    <input type="time" id="time" />
-    <select id="status">
-      <option value="Scheduled">Scheduled</option>
-      <option value="Completed">Completed</option>
-      <option value="Cancelled">Cancelled</option>
-    </select>
-    <input type="text" id="notes" placeholder="Notes" />
-    <button onclick="addRow()">Add Row</button>
+      <section class="stats-grid">
+        <article class="stat-card">
+          <span class="stat-label">TOTAL</span>
+          <strong id="totalCount">0</strong>
+          <small>All saved tasks</small>
+        </article>
+        <article class="stat-card accent">
+          <span class="stat-label">TODAY</span>
+          <strong id="todayCount">0</strong>
+          <small>Tasks scheduled today</small>
+        </article>
+        <article class="stat-card success">
+          <span class="stat-label">COMPLETED</span>
+          <strong id="completedCount">0</strong>
+          <small>Finished tasks</small>
+        </article>
+        <article class="stat-card warning">
+          <span class="stat-label">PENDING</span>
+          <strong id="pendingCount">0</strong>
+          <small>Scheduled / in progress</small>
+        </article>
+      </section>
+
+      <section class="workspace-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">TASK TRACKER</p>
+            <h2 id="viewTitle">All Tasks</h2>
+          </div>
+          <div class="toolbar">
+            <div class="search-box">
+              <span>⌕</span>
+              <input id="searchInput" type="search" placeholder="Search tasks...">
+            </div>
+            <select id="statusFilter">
+              <option value="all">All statuses</option>
+              <option value="Scheduled">Scheduled</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>TASK</th>
+                <th>DATE</th>
+                <th>TIME</th>
+                <th>STATUS</th>
+                <th>NOTES</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="taskTableBody"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state">
+            <div class="empty-icon">＋</div>
+            <h3>No tasks here</h3>
+            <p>Add a task to start building your workspace.</p>
+            <button class="secondary-btn" id="emptyAddBtn">Create a task</button>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
-     
-<div class="stats">
-  <div class="card">Total Tasks: 10</div>
-  <div class="card">Completed: 5</div>
-  <div class="card">Pending: 5</div>
-</div>
-  <!-- Tracker Table -->
-  <table id="trackerTable">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Date</th>
-        <th>Time</th>
-        <th>Status</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Rows will be added dynamically -->
-    </tbody>
-  </table>
-</section>
 
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">MANUAL ENTRY</p>
+          <h2 id="modalTitle">New Task</h2>
+        </div>
+        <button class="close-btn" id="closeModalBtn" aria-label="Close">×</button>
+      </div>
+
+      <form id="taskForm">
+        <input type="hidden" id="taskId">
+        <div class="form-grid">
+          <label class="field full">
+            <span>Title</span>
+            <input id="title" type="text" placeholder="What needs to be done?" required>
+          </label>
+
+          <label class="field">
+            <span>Date</span>
+            <input id="date" type="date" required>
+          </label>
+
+          <label class="field">
+            <span>Time</span>
+            <input id="time" type="time" required>
+          </label>
+
+          <label class="field full">
+            <span>Status</span>
+            <select id="status">
+              <option>Scheduled</option>
+              <option>In Progress</option>
+              <option>Completed</option>
+              <option>Cancelled</option>
+            </select>
+          </label>
+
+          <label class="field full">
+            <span>Notes</span>
+            <textarea id="notes" rows="4" placeholder="Add any details..."></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="secondary-btn" id="cancelBtn">Cancel</button>
+          <button type="submit" class="primary-btn" id="saveBtn">Save Task</button>
+        </div>
+      </form>
+    </div>
   </div>
-<script src="script.js"></script>
 
+  <div class="toast" id="toast"></div>
+  <script src="script.js"></script>
 </body>
 </html>
