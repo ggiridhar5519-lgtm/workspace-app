@@ -45,7 +45,13 @@
           <h1>Command Center</h1>
           <p class="subheading" id="currentDate"></p>
         </div>
-        <button class="primary-btn" id="openAddBtn">＋ New Task</button>
+        <div class="header-actions">
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark mode">
+            <span class="theme-icon" id="themeIcon">☾</span>
+            <span id="themeLabel">Dark</span>
+          </button>
+          <button class="primary-btn" id="openAddBtn">＋ New Task</button>
+        </div>
       </header>
 
       <section class="stats-grid">
@@ -99,6 +105,7 @@
                 <th>TASK</th>
                 <th>DATE</th>
                 <th>TIME</th>
+                <th>PRIORITY</th>
                 <th>STATUS</th>
                 <th>NOTES</th>
                 <th></th>
@@ -145,13 +152,22 @@
             <input id="time" type="time" required>
           </label>
 
-          <label class="field full">
+          <label class="field">
             <span>Status</span>
             <select id="status">
               <option>Scheduled</option>
               <option>In Progress</option>
               <option>Completed</option>
               <option>Cancelled</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Priority</span>
+            <select id="priority">
+              <option>Normal</option>
+              <option>High</option>
+              <option>Low</option>
             </select>
           </label>
 
