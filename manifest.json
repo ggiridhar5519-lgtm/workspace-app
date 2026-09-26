@@ -1,7 +1,7 @@
 {
-  "name": "Personal Command Center",
-  "short_name": "Command Center",
-  "description": "A personal task management dashboard.",
+  "name": "GR Solutions - Personal Command Center",
+"short_name": "GR Solutions",
+"description": "GR Solutions Personal Command Center",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f5f6",
