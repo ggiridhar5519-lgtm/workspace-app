@@ -1,1186 +1,544 @@
-/* =========================================================
-   PERSONAL COMMAND CENTER
-   TASK MANAGEMENT + LOCAL STORAGE + THEME
-   ========================================================= */
-
 const STORAGE_KEY = "personalCommandCenterTasks";
-const THEME_KEY = "personalCommandCenterTheme";
 
-let tasks = [];
-let currentFilter = "all";
-let editingTaskId = null;
+let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let activeView = "all";
 
+const $ = (id) => document.getElementById(id);
 
-/* =========================================================
-   DOM ELEMENTS
-   ========================================================= */
-
-const taskModal = document.getElementById("taskModal");
-const taskForm = document.getElementById("taskForm");
-
-const newTaskBtn = document.getElementById("newTaskBtn");
-const emptyNewTaskBtn = document.getElementById("emptyNewTaskBtn");
-
-const closeModalBtn = document.getElementById("closeModalBtn");
-const cancelModalBtn = document.getElementById("cancelModalBtn");
-
-const clearAllBtn = document.getElementById("clearAllBtn");
-
-const themeToggle = document.getElementById("themeToggle");
-
-const searchInput = document.getElementById("searchInput");
-const statusFilter = document.getElementById("statusFilter");
-
-const taskTableBody = document.getElementById("taskTableBody");
-const emptyState = document.getElementById("emptyState");
-
-const modalTitle = document.getElementById("modalTitle");
-
-const taskId = document.getElementById("taskId");
-const taskTitle = document.getElementById("taskTitle");
-const taskDate = document.getElementById("taskDate");
-const taskTime = document.getElementById("taskTime");
-const taskPriority = document.getElementById("taskPriority");
-const taskStatus = document.getElementById("taskStatus");
-const taskNotes = document.getElementById("taskNotes");
-
-const totalTasks = document.getElementById("totalTasks");
-const todayTasks = document.getElementById("todayTasks");
-const completedTasks = document.getElementById("completedTasks");
-const pendingTasks = document.getElementById("pendingTasks");
-
-
-/* =========================================================
-   INITIALIZE
-   ========================================================= */
+const modal = $("modalBackdrop");
+const form = $("taskForm");
 
 document.addEventListener("DOMContentLoaded", () => {
-
-    loadTheme();
-    loadTasks();
-
-    bindEvents();
-
-    renderTasks();
-    updateStats();
-
+  setCurrentDate();
+  bindEvents();
+  render();
 });
 
-
-/* =========================================================
-   EVENTS
-   ========================================================= */
-
 function bindEvents() {
+  $("openAddBtn").addEventListener("click", () => openModal());
+  $("emptyAddBtn").addEventListener("click", () => openModal());
+  $("closeModalBtn").addEventListener("click", closeModal);
+  $("cancelBtn").addEventListener("click", closeModal);
 
-    newTaskBtn.addEventListener("click", () => {
-        openModal();
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  form.addEventListener("submit", saveTask);
+
+  $("searchInput").addEventListener("input", render);
+  $("statusFilter").addEventListener("change", render);
+
+  document.querySelectorAll(".nav-item").forEach(button => {
+    button.addEventListener("click", () => {
+      activeView = button.dataset.view;
+
+      document.querySelectorAll(".nav-item")
+        .forEach(item => item.classList.remove("active"));
+
+      button.classList.add("active");
+
+      const titles = {
+        all: "All Tasks",
+        today: "Today",
+        upcoming: "Upcoming",
+        completed: "Completed",
+        cancelled: "Cancelled"
+      };
+
+      $("viewTitle").textContent = titles[activeView];
+
+      render();
     });
+  });
 
+  $("clearAllBtn").addEventListener("click", () => {
+    if (!tasks.length) return;
 
-    emptyNewTaskBtn.addEventListener("click", () => {
-        openModal();
-    });
-
-
-    closeModalBtn.addEventListener("click", () => {
-        closeModal();
-    });
-
-
-    cancelModalBtn.addEventListener("click", () => {
-        closeModal();
-    });
-
-
-    document.querySelector(".modal-overlay").addEventListener("click", () => {
-        closeModal();
-    });
-
-
-    taskForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        saveTask();
-    });
-
-
-    searchInput.addEventListener("input", () => {
-        renderTasks();
-    });
-
-
-    statusFilter.addEventListener("change", () => {
-        renderTasks();
-    });
-
-
-    clearAllBtn.addEventListener("click", () => {
-        clearAllTasks();
-    });
-
-
-    themeToggle.addEventListener("click", () => {
-        toggleTheme();
-    });
-
-
-    document.querySelectorAll(".nav-item").forEach(button => {
-
-        button.addEventListener("click", () => {
-
-            document.querySelectorAll(".nav-item")
-                .forEach(item => item.classList.remove("active"));
-
-            button.classList.add("active");
-
-            currentFilter = button.dataset.filter;
-
-            renderTasks();
-
-        });
-
-    });
-
-
-    document.addEventListener("keydown", event => {
-
-        if (event.key === "Escape") {
-            closeModal();
-        }
-
-    });
-
-}
-
-
-/* =========================================================
-   LOAD TASKS
-   ========================================================= */
-
-function loadTasks() {
-
-    try {
-
-        const storedTasks =
-            localStorage.getItem(STORAGE_KEY);
-
-        if (storedTasks) {
-
-            tasks = JSON.parse(storedTasks);
-
-            if (!Array.isArray(tasks)) {
-                tasks = [];
-            }
-
-            return;
-        }
-
-
-        /*
-         * Legacy migration.
-         *
-         * If an older version of the dashboard used
-         * "trackerData", preserve that information.
-         */
-
-        const legacyData =
-            localStorage.getItem("trackerData");
-
-        if (legacyData) {
-
-            const oldTasks = JSON.parse(legacyData);
-
-            if (Array.isArray(oldTasks)) {
-
-                tasks = oldTasks.map(task => ({
-                    id: task.id || generateId(),
-
-                    title: task.title || "",
-
-                    date: task.date || "",
-
-                    time: task.time || "",
-
-                    status: task.status || "pending",
-
-                    notes: task.notes || "",
-
-                    priority: task.priority || "normal"
-                }));
-
-                persistTasks();
-            }
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Unable to load tasks:",
-            error
-        );
-
-        tasks = [];
+    if (confirm("Delete all saved tasks? This cannot be undone.")) {
+      tasks = [];
+      persist();
+      render();
+      showToast("All tasks deleted");
     }
-
+  });
 }
 
+function setCurrentDate() {
+  const now = new Date();
 
-/* =========================================================
-   SAVE TASKS
-   ========================================================= */
-
-function persistTasks() {
-
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(tasks)
-    );
-
+  $("currentDate").textContent = now.toLocaleDateString(
+    undefined,
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }
+  );
 }
-
-
-/* =========================================================
-   OPEN MODAL
-   ========================================================= */
 
 function openModal(task = null) {
+  form.reset();
 
-    editingTaskId = task ? task.id : null;
+  $("taskId").value = "";
 
-    taskForm.reset();
+  if (task) {
 
-    if (task) {
+    $("modalTitle").textContent = "Edit Task";
+    $("saveBtn").textContent = "Update Task";
 
-        modalTitle.textContent = "Edit Task";
+    $("taskId").value = task.id;
+    $("title").value = task.title;
+    $("date").value = task.date;
+    $("time").value = task.time;
+    $("status").value = task.status;
+    $("notes").value = task.notes || "";
 
-        taskId.value = task.id;
+  } else {
 
-        taskTitle.value = task.title || "";
+    $("modalTitle").textContent = "New Task";
+    $("saveBtn").textContent = "Save Task";
 
-        taskDate.value = task.date || "";
+    const now = new Date();
 
-        taskTime.value = task.time || "";
+    $("date").value = formatDateInput(now);
+    $("time").value = formatTimeInput(now);
+  }
 
-        taskPriority.value =
-            task.priority || "normal";
+  modal.classList.add("open");
 
-        taskStatus.value =
-            task.status || "pending";
-
-        taskNotes.value =
-            task.notes || "";
-
-    } else {
-
-        modalTitle.textContent =
-            "Create New Task";
-
-        taskId.value = "";
-
-        taskPriority.value = "normal";
-
-        taskStatus.value = "pending";
-
-        /*
-         * Automatically use today's date for
-         * new tasks.
-         */
-
-        taskDate.value =
-            getTodayDate();
-
-    }
-
-    taskModal.classList.add("show");
-
-    document.body.style.overflow = "hidden";
-
-    setTimeout(() => {
-
-        taskTitle.focus();
-
-    }, 100);
-
+  setTimeout(() => {
+    $("title").focus();
+  }, 50);
 }
-
-
-/* =========================================================
-   CLOSE MODAL
-   ========================================================= */
 
 function closeModal() {
-
-    taskModal.classList.remove("show");
-
-    document.body.style.overflow = "";
-
-    editingTaskId = null;
-
-    taskForm.reset();
-
+  modal.classList.remove("open");
 }
 
+function saveTask(event) {
+  event.preventDefault();
 
-/* =========================================================
-   SAVE / UPDATE TASK
-   ========================================================= */
+  const id = $("taskId").value;
 
-function saveTask() {
+  const data = {
+    id: id || crypto.randomUUID(),
+    title: $("title").value.trim(),
+    date: $("date").value,
+    time: $("time").value,
+    status: $("status").value,
+    notes: $("notes").value.trim()
+  };
 
-    const title =
-        taskTitle.value.trim();
+  if (!data.title || !data.date || !data.time) {
+    return;
+  }
 
-    const date =
-        taskDate.value;
+  if (id) {
 
-    const time =
-        taskTime.value;
+    tasks = tasks.map(task =>
+      task.id === id ? data : task
+    );
 
-    const priority =
-        taskPriority.value || "normal";
+    showToast("Task updated");
 
-    const status =
-        taskStatus.value || "pending";
+  } else {
 
-    const notes =
-        taskNotes.value.trim();
+    tasks.push(data);
 
+    showToast("Task created");
+  }
 
-    if (!title) {
+  persist();
 
-        alert("Please enter a task title.");
+  closeModal();
 
-        taskTitle.focus();
-
-        return;
-    }
-
-
-    if (!date) {
-
-        alert("Please select a date.");
-
-        taskDate.focus();
-
-        return;
-    }
-
-
-    if (editingTaskId) {
-
-        const index =
-            tasks.findIndex(
-                task => task.id === editingTaskId
-            );
-
-
-        if (index !== -1) {
-
-            tasks[index] = {
-
-                ...tasks[index],
-
-                title,
-                date,
-                time,
-                priority,
-                status,
-                notes
-
-            };
-
-        }
-
-    } else {
-
-        const newTask = {
-
-            id: generateId(),
-
-            title,
-
-            date,
-
-            time,
-
-            priority,
-
-            status,
-
-            notes,
-
-            createdAt:
-                new Date().toISOString()
-
-        };
-
-
-        tasks.unshift(newTask);
-
-    }
-
-
-    persistTasks();
-
-    closeModal();
-
-    renderTasks();
-
-    updateStats();
-
+  render();
 }
-
-
-/* =========================================================
-   DELETE TASK
-   ========================================================= */
 
 function deleteTask(id) {
 
-    const task =
-        tasks.find(item => item.id === id);
+  const task = tasks.find(item => item.id === id);
 
-    if (!task) {
-        return;
-    }
+  if (!task) return;
 
+  if (confirm(`Delete "${task.title}"?`)) {
 
-    const confirmed =
-        confirm(
-            `Delete "${task.title}"?`
-        );
+    tasks = tasks.filter(item => item.id !== id);
 
+    persist();
 
-    if (!confirmed) {
-        return;
-    }
+    render();
 
-
-    tasks =
-        tasks.filter(
-            item => item.id !== id
-        );
-
-
-    persistTasks();
-
-    renderTasks();
-
-    updateStats();
-
+    showToast("Task deleted");
+  }
 }
 
+function updateStatus(id, status) {
 
-/* =========================================================
-   EDIT TASK
-   ========================================================= */
+  tasks = tasks.map(task =>
+    task.id === id
+      ? { ...task, status }
+      : task
+  );
 
-function editTask(id) {
+  persist();
 
-    const task =
-        tasks.find(item => item.id === id);
+  render();
 
-    if (!task) {
-        return;
-    }
-
-    openModal(task);
-
+  showToast("Status updated");
 }
 
+function getVisibleTasks() {
 
-/* =========================================================
-   UPDATE STATUS
-   ========================================================= */
+  const search =
+    $("searchInput").value.trim().toLowerCase();
 
-function updateTaskStatus(id, status) {
+  const filter =
+    $("statusFilter").value;
 
-    const task =
-        tasks.find(item => item.id === id);
+  const today =
+    formatDateInput(new Date());
 
-    if (!task) {
-        return;
-    }
+  return [...tasks]
 
+    .filter(task => {
 
-    task.status = status;
+      if (
+        activeView === "today" &&
+        task.date !== today
+      ) {
+        return false;
+      }
 
-    persistTasks();
+      if (
+        activeView === "upcoming" &&
+        task.date <= today
+      ) {
+        return false;
+      }
 
-    renderTasks();
+      if (
+        activeView === "completed" &&
+        task.status !== "Completed"
+      ) {
+        return false;
+      }
 
-    updateStats();
+      if (
+        activeView === "cancelled" &&
+        task.status !== "Cancelled"
+      ) {
+        return false;
+      }
 
+      if (
+        filter !== "all" &&
+        task.status !== filter
+      ) {
+        return false;
+      }
+
+      if (search) {
+
+        const haystack =
+          `${task.title} ${task.notes} ${task.status}`
+          .toLowerCase();
+
+        if (!haystack.includes(search)) {
+          return false;
+        }
+      }
+
+      return true;
+    })
+
+    .sort((a, b) =>
+      `${a.date} ${a.time}`.localeCompare(
+        `${b.date} ${b.time}`
+      )
+    );
 }
 
+function render() {
 
-/* =========================================================
-   FILTER TASKS
-   ========================================================= */
+  updateStats();
 
-function getFilteredTasks() {
+  const visible =
+    getVisibleTasks();
 
-    const search =
-        searchInput.value
-            .trim()
-            .toLowerCase();
+  const body =
+    $("taskTableBody");
 
-    const status =
-        statusFilter.value;
+  body.innerHTML = "";
 
+  $("emptyState").style.display =
+    visible.length ? "none" : "block";
 
-    const today =
-        getTodayDate();
+  visible.forEach(task => {
 
+    const row =
+      document.createElement("tr");
 
-    return tasks.filter(task => {
+    const titleCell =
+      document.createElement("td");
 
-        /* SEARCH */
+    titleCell.innerHTML =
+      `<div class="task-title">
+        ${escapeHtml(task.title)}
+      </div>`;
 
-        const searchableText = [
+    const dateCell =
+      document.createElement("td");
 
-            task.title,
+    dateCell.textContent =
+      formatDisplayDate(task.date);
 
-            task.notes,
+    const timeCell =
+      document.createElement("td");
 
-            task.status,
+    timeCell.textContent =
+      formatDisplayTime(task.time);
 
-            task.priority,
+    const statusCell =
+      document.createElement("td");
 
-            task.date
+    const select =
+      document.createElement("select");
 
-        ]
-            .join(" ")
-            .toLowerCase();
+    select.className =
+      `status-select ${statusClass(task.status)}`;
 
+    [
+      "Scheduled",
+      "In Progress",
+      "Completed",
+      "Cancelled"
+    ].forEach(status => {
 
-        const matchesSearch =
-            !search ||
-            searchableText.includes(search);
+      const option =
+        document.createElement("option");
 
+      option.value = status;
+      option.textContent = status;
+      option.selected =
+        task.status === status;
 
-        if (!matchesSearch) {
-            return false;
-        }
-
-
-        /* STATUS FILTER */
-
-        if (
-            status !== "all" &&
-            task.status !== status
-        ) {
-            return false;
-        }
-
-
-        /* SIDEBAR FILTER */
-
-        switch (currentFilter) {
-
-            case "today":
-
-                return task.date === today;
-
-
-            case "upcoming":
-
-                return (
-                    task.date > today &&
-                    task.status !== "completed" &&
-                    task.status !== "cancelled"
-                );
-
-
-            case "completed":
-
-                return task.status === "completed";
-
-
-            case "cancelled":
-
-                return task.status === "cancelled";
-
-
-            case "all":
-
-            default:
-
-                return true;
-        }
-
+      select.appendChild(option);
     });
 
+    select.addEventListener(
+      "change",
+      () => updateStatus(
+        task.id,
+        select.value
+      )
+    );
+
+    statusCell.appendChild(select);
+
+    const notesCell =
+      document.createElement("td");
+
+    notesCell.className =
+      "task-notes";
+
+    notesCell.title =
+      task.notes || "";
+
+    notesCell.textContent =
+      task.notes || "—";
+
+    const actionsCell =
+      document.createElement("td");
+
+    actionsCell.innerHTML = `
+      <div class="row-actions">
+
+        <button
+          class="icon-btn edit"
+          title="Edit task">
+          ✎
+        </button>
+
+        <button
+          class="icon-btn delete"
+          title="Delete task">
+          ×
+        </button>
+
+      </div>
+    `;
+
+    actionsCell
+      .querySelector(".edit")
+      .addEventListener(
+        "click",
+        () => openModal(task)
+      );
+
+    actionsCell
+      .querySelector(".delete")
+      .addEventListener(
+        "click",
+        () => deleteTask(task.id)
+      );
+
+    row.append(
+      titleCell,
+      dateCell,
+      timeCell,
+      statusCell,
+      notesCell,
+      actionsCell
+    );
+
+    body.appendChild(row);
+  });
 }
-
-
-/* =========================================================
-   RENDER TASKS
-   ========================================================= */
-
-function renderTasks() {
-
-    const filteredTasks =
-        getFilteredTasks();
-
-
-    taskTableBody.innerHTML = "";
-
-
-    if (filteredTasks.length === 0) {
-
-        emptyState.classList.add("visible");
-
-        return;
-
-    }
-
-
-    emptyState.classList.remove("visible");
-
-
-    filteredTasks.forEach(task => {
-
-        const row =
-            document.createElement("tr");
-
-
-        const formattedDate =
-            formatDate(task.date);
-
-
-        const formattedTime =
-            formatTime(task.time);
-
-
-        const statusLabel =
-            formatStatus(task.status);
-
-
-        const priorityLabel =
-            formatPriority(task.priority);
-
-
-        row.innerHTML = `
-
-            <td>
-                <div class="task-title"
-                     title="${escapeHTML(task.title)}">
-                    ${escapeHTML(task.title)}
-                </div>
-            </td>
-
-
-            <td>
-                ${formattedDate}
-            </td>
-
-
-            <td>
-                ${formattedTime}
-            </td>
-
-
-            <td>
-                <span class="priority-badge ${task.priority || "normal"}">
-                    ${priorityLabel}
-                </span>
-            </td>
-
-
-            <td>
-
-                <select
-                    class="status-select"
-                    data-id="${task.id}">
-
-                    <option
-                        value="pending"
-                        ${task.status === "pending" ? "selected" : ""}>
-                        Pending
-                    </option>
-
-                    <option
-                        value="in-progress"
-                        ${task.status === "in-progress" ? "selected" : ""}>
-                        In Progress
-                    </option>
-
-                    <option
-                        value="completed"
-                        ${task.status === "completed" ? "selected" : ""}>
-                        Completed
-                    </option>
-
-                    <option
-                        value="cancelled"
-                        ${task.status === "cancelled" ? "selected" : ""}>
-                        Cancelled
-                    </option>
-
-                </select>
-
-            </td>
-
-
-            <td>
-
-                <div
-                    class="task-notes"
-                    title="${escapeHTML(task.notes || "")}">
-                    ${escapeHTML(task.notes || "—")}
-                </div>
-
-            </td>
-
-
-            <td>
-
-                <div class="actions">
-
-                    <button
-                        class="action-btn"
-                        title="Edit task"
-                        data-action="edit"
-                        data-id="${task.id}">
-                        ✎
-                    </button>
-
-
-                    <button
-                        class="action-btn delete"
-                        title="Delete task"
-                        data-action="delete"
-                        data-id="${task.id}">
-                        ×
-                    </button>
-
-                </div>
-
-            </td>
-
-        `;
-
-
-        taskTableBody.appendChild(row);
-
-    });
-
-
-    /*
-     * Bind status dropdowns
-     */
-
-    document
-        .querySelectorAll(".status-select")
-        .forEach(select => {
-
-            select.addEventListener(
-                "change",
-                event => {
-
-                    const id =
-                        event.target.dataset.id;
-
-                    updateTaskStatus(
-                        id,
-                        event.target.value
-                    );
-
-                }
-            );
-
-        });
-
-
-    /*
-     * Bind edit/delete buttons
-     */
-
-    document
-        .querySelectorAll("[data-action]")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    const action =
-                        button.dataset.action;
-
-                    const id =
-                        button.dataset.id;
-
-
-                    if (action === "edit") {
-
-                        editTask(id);
-
-                    }
-
-
-                    if (action === "delete") {
-
-                        deleteTask(id);
-
-                    }
-
-                }
-            );
-
-        });
-
-}
-
-
-/* =========================================================
-   STATISTICS
-   ========================================================= */
 
 function updateStats() {
 
-    const today =
-        getTodayDate();
+  const today =
+    formatDateInput(new Date());
 
+  $("totalCount").textContent =
+    tasks.length;
 
-    const total =
-        tasks.length;
+  $("todayCount").textContent =
+    tasks.filter(
+      task => task.date === today
+    ).length;
 
+  $("completedCount").textContent =
+    tasks.filter(
+      task => task.status === "Completed"
+    ).length;
 
-    const todayCount =
-        tasks.filter(
-            task => task.date === today
-        ).length;
-
-
-    const completed =
-        tasks.filter(
-            task => task.status === "completed"
-        ).length;
-
-
-    const pending =
-        tasks.filter(
-            task =>
-                task.status !== "completed" &&
-                task.status !== "cancelled"
-        ).length;
-
-
-    totalTasks.textContent =
-        total;
-
-
-    todayTasks.textContent =
-        todayCount;
-
-
-    completedTasks.textContent =
-        completed;
-
-
-    pendingTasks.textContent =
-        pending;
-
+  $("pendingCount").textContent =
+    tasks.filter(
+      task =>
+        task.status === "Scheduled" ||
+        task.status === "In Progress"
+    ).length;
 }
 
+function persist() {
 
-/* =========================================================
-   CLEAR ALL
-   ========================================================= */
-
-function clearAllTasks() {
-
-    if (tasks.length === 0) {
-
-        alert("There are no tasks to clear.");
-
-        return;
-    }
-
-
-    const confirmed =
-        confirm(
-            "This will permanently delete all tasks from this device. Continue?"
-        );
-
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    tasks = [];
-
-    persistTasks();
-
-    renderTasks();
-
-    updateStats();
-
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(tasks)
+  );
 }
 
+function formatDateInput(date) {
 
-/* =========================================================
-   THEME
-   ========================================================= */
+  const year =
+    date.getFullYear();
 
-function loadTheme() {
+  const month =
+    String(date.getMonth() + 1)
+      .padStart(2, "0");
 
-    const savedTheme =
-        localStorage.getItem(THEME_KEY);
+  const day =
+    String(date.getDate())
+      .padStart(2, "0");
 
-
-    if (savedTheme === "dark") {
-
-        document.documentElement
-            .setAttribute(
-                "data-theme",
-                "dark"
-            );
-
-        updateThemeButton(true);
-
-    } else {
-
-        document.documentElement
-            .removeAttribute("data-theme");
-
-        updateThemeButton(false);
-
-    }
-
+  return `${year}-${month}-${day}`;
 }
 
+function formatTimeInput(date) {
 
-function toggleTheme() {
+  const hours =
+    String(date.getHours())
+      .padStart(2, "0");
 
-    const isDark =
-        document.documentElement
-            .getAttribute("data-theme") === "dark";
+  const minutes =
+    String(date.getMinutes())
+      .padStart(2, "0");
 
-
-    if (isDark) {
-
-        document.documentElement
-            .removeAttribute("data-theme");
-
-        localStorage.setItem(
-            THEME_KEY,
-            "light"
-        );
-
-        updateThemeButton(false);
-
-    } else {
-
-        document.documentElement
-            .setAttribute(
-                "data-theme",
-                "dark"
-            );
-
-        localStorage.setItem(
-            THEME_KEY,
-            "dark"
-        );
-
-        updateThemeButton(true);
-
-    }
-
+  return `${hours}:${minutes}`;
 }
 
+function formatDisplayDate(value) {
 
-function updateThemeButton(isDark) {
+  if (!value) return "—";
 
-    if (!themeToggle) {
-        return;
+  return new Date(
+    `${value}T00:00:00`
+  ).toLocaleDateString(
+    undefined,
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
     }
-
-
-    themeToggle.textContent =
-        isDark ? "☀" : "☾";
-
-
-    themeToggle.title =
-        isDark
-            ? "Switch to light mode"
-            : "Switch to dark mode";
-
+  );
 }
 
+function formatDisplayTime(value) {
 
-/* =========================================================
-   DATE HELPERS
-   ========================================================= */
+  if (!value) return "—";
 
-function getTodayDate() {
+  const [hours, minutes] =
+    value.split(":");
 
-    const now =
-        new Date();
+  const date =
+    new Date();
 
+  date.setHours(
+    Number(hours),
+    Number(minutes)
+  );
 
-    const year =
-        now.getFullYear();
-
-
-    const month =
-        String(
-            now.getMonth() + 1
-        ).padStart(2, "0");
-
-
-    const day =
-        String(
-            now.getDate()
-        ).padStart(2, "0");
-
-
-    return `${year}-${month}-${day}`;
-
+  return date.toLocaleTimeString(
+    [],
+    {
+      hour: "numeric",
+      minute: "2-digit"
+    }
+  );
 }
 
+function statusClass(status) {
 
-function formatDate(dateString) {
+  return status
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+}
 
-    if (!dateString) {
-        return "—";
-    }
+function escapeHtml(value) {
 
+  return value.replace(
+    /[&<>"']/g,
+    char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[char])
+  );
+}
 
-    const date =
-        new Date(
-            `${dateString}T00:00:00`
-        );
+let toastTimer;
 
+function showToast(message) {
 
-    if (Number.isNaN(date.getTime())) {
-        return dateString;
-    }
+  const toast =
+    $("toast");
 
+  toast.textContent =
+    message;
 
-    return date.toLocaleDateString(
-        undefined,
-        {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        }
+  toast.classList.add("show");
+
+  clearTimeout(toastTimer);
+
+  toastTimer =
+    setTimeout(
+      () => toast.classList.remove("show"),
+      1800
     );
-
-}
-
-
-function formatTime(timeString) {
-
-    if (!timeString) {
-        return "—";
-    }
-
-
-    const [hours, minutes] =
-        timeString.split(":");
-
-
-    const date =
-        new Date();
-
-    date.setHours(
-        Number(hours),
-        Number(minutes),
-        0,
-        0
-    );
-
-
-    return date.toLocaleTimeString(
-        undefined,
-        {
-            hour: "numeric",
-            minute: "2-digit"
-        }
-    );
-
-}
-
-
-/* =========================================================
-   LABEL HELPERS
-   ========================================================= */
-
-function formatStatus(status) {
-
-    const labels = {
-
-        "pending":
-            "Pending",
-
-        "in-progress":
-            "In Progress",
-
-        "completed":
-            "Completed",
-
-        "cancelled":
-            "Cancelled"
-
-    };
-
-
-    return labels[status] || "Pending";
-
-}
-
-
-function formatPriority(priority) {
-
-    const labels = {
-
-        high:
-            "High",
-
-        normal:
-            "Normal",
-
-        low:
-            "Low"
-
-    };
-
-
-    return labels[priority] || "Normal";
-
-}
-
-
-/* =========================================================
-   ID GENERATOR
-   ========================================================= */
-
-function generateId() {
-
-    return (
-        Date.now().toString(36) +
-        Math.random()
-            .toString(36)
-            .substring(2, 9)
-    );
-
-}
-
-
-/* =========================================================
-   HTML ESCAPING
-   ========================================================= */
-
-function escapeHTML(value) {
-
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
 }
