@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#111315">
   <title>Personal Command Center</title>
   <link rel="stylesheet" href="style.css">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#343a40">
 </head>
 <body>
   <div class="app-shell">
@@ -171,5 +174,23 @@
 
   <div class="toast" id="toast"></div>
   <script src="script.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("./service-worker.js")
+                .then(() => {
+                    console.log("PWA service worker registered.");
+                })
+                .catch(error => {
+                    console.error(
+                        "Service worker registration failed:",
+                        error
+                    );
+                });
+        });
+    }
+</script>
+  
 </body>
 </html>
